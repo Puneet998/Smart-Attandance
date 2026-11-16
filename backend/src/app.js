@@ -2,7 +2,8 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-
+const dns = require("node:dns")
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 const authRoutes = require("./routes/authRoutes");
 const institutionRoutes = require("./routes/institutionRoutes");
 const academicProgramRoutes = require("./routes/academicProgramRoutes");
