@@ -2,8 +2,10 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-// const dns = require("node:dns")
-// dns.setServers(["1.1.1.1", "8.8.8.8"]);
+
+const dns = require("node:dns");
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
+
 const authRoutes = require("./routes/authRoutes");
 const institutionRoutes = require("./routes/institutionRoutes");
 const academicProgramRoutes = require("./routes/academicProgramRoutes");
@@ -18,25 +20,39 @@ const departmentRoutes = require("./routes/departmentRoutes");
 
 const app = express();
 
-// Allowed frontend origins
-const allowedOrigins = (process.env.CLIENT_URL || "")
-    .split(",")
-    .map((origin) => origin.trim().replace(/\/$/, ""))
-    .filter(Boolean);
+// Only allowed frontend origins
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://attendance.puneetdev.xyz",
+];
+
+// Normalize origin
+const normalizeOrigin = (origin = "") => {
+    return origin.trim().replace(/\/+$/, "");
+};
+
+// Check allowed origin
+const isAllowedOrigin = (origin) => {
+    return allowedOrigins.includes(normalizeOrigin(origin));
+};
 
 // CORS configuration
 app.use(
     cors({
         origin: function (origin, callback) {
-            if (origin && allowedOrigins.includes(origin.replace(/\/$/, ""))) {
+            if (!origin || isAllowedOrigin(origin)) {
                 return callback(null, true);
             }
 
-            return callback(null, false);
+            return callback(new Error("Not allowed by CORS"));
         },
         credentials: true,
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+            "X-CSRF-Token",
+        ],
     })
 );
 
@@ -63,9 +79,7 @@ const verifyWebsiteOrigin = (req, res, next) => {
         });
     }
 
-    const normalizedOrigin = origin.replace(/\/$/, "");
-
-    if (!allowedOrigins.includes(normalizedOrigin)) {
+    if (!isAllowedOrigin(origin)) {
         return res.status(403).json({
             success: false,
             message: "Access denied. Unauthorized website.",
@@ -75,7 +89,10 @@ const verifyWebsiteOrigin = (req, res, next) => {
     next();
 };
 
-// Apply protection to all other API routes
+app.get("/", (req, res) => {
+    res.json({ "status": 201, "message": "server is running" })
+})
+// Apply protection to all API routes
 app.use("/api", verifyWebsiteOrigin);
 
 // API Routes
